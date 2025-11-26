@@ -11,26 +11,40 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        stack: ["heroku-22", "heroku-24"]
+        arch: ["amd64", "arm64"]
     runs-on: ubuntu-24.04
-    env:
-      STACK: ${{ matrix.stack }}
-      HATCHET_APP_LIMIT: 100
-      HATCHET_RETRIES: 3
-      HEROKU_API_KEY: ${{ secrets.HEROKU_API_KEY }}
-      HEROKU_API_USER: ${{ secrets.HEROKU_API_USER }}
-      IS_RUNNING_ON_CI: 1
-      HATCHET_EXPENSIVE_MODE: 1
-      PARALLEL_SPLIT_TEST_PROCESSES: 25
     steps:
       - name: Checkout
         uses: actions/checkout@v5
-      - name: Set up Ruby and dependencies
-        uses: ruby/setup-ruby@v1
-        with:
-          ruby-version: 3.1
-          bundler-cache: true
-      - name: Hatchet setup
-        run: bundle exec hatchet ci:setup
-      - name: Run test suite
-        run: bundle exec parallel_split_test spec/
+
+      - name: Set up QEMU (for arm64 emulation)
+        if: matrix.arch == 'arm64'
+        uses: docker/setup-qemu-action@v3
+
+      - name: Install pack CLI
+        run: |
+          curl -sSL "https://github.com/buildpacks/pack/releases/download/v0.35.1/pack-v0.35.1-linux.tgz" | sudo tar -C /usr/local/bin/ --no-same-owner -xzv pack
+
+      - name: Build test image
+        run: |
+          # Create a minimal test app
+          mkdir -p test-app
+          echo "# Test app for FFmpeg buildpack" > test-app/README.md
+
+          # Build with pack CLI
+          pack build activestorage-preview-test \
+            --buildpack . \
+            --builder heroku/builder:24 \
+            --platform linux/${{ matrix.arch }} \
+            --trust-builder
+
+      - name: Verify FFmpeg installation
+        run: |
+          # Run the container and verify ffmpeg is available
+          docker run --rm --platform linux/${{ matrix.arch }} activestorage-preview-test \
+            sh -c "which ffmpeg && ffmpeg -version"
+
+      - name: Verify ffprobe installation
+        run: |
+          docker run --rm --platform linux/${{ matrix.arch }} activestorage-preview-test \
+            sh -c "which ffprobe && ffprobe -version"

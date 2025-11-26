@@ -1,0 +1,21 @@
+api = "0.10"
+
+[buildpack]
+id = "porter-dev/activestorage-preview"
+version = "1.0.0"
+name = "ActiveStorage Preview"
+homepage = "https://github.com/heroku/heroku-buildpack-activestorage-preview"
+
+[[buildpack.licenses]]
+type = "MIT"
+
+[[stacks]]
+id = "*"
+
+[[targets]]
+os = "linux"
+arch = "arm64"
+
+[[targets]]
+os = "linux"
+arch = "amd64"

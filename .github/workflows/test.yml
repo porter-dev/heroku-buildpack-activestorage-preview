@@ -1,0 +1,37 @@
+name: Test Buildpack
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Pack CLI
+        run: |
+          curl -sSL "https://github.com/buildpacks/pack/releases/download/v0.35.1/pack-v0.35.1-linux.tgz" | sudo tar -C /usr/local/bin/ --no-same-owner -xzv pack
+
+      - name: Build test image
+        run: |
+          pack build test-ffmpeg \
+            --buildpack heroku/ruby \
+            --buildpack . \
+            --path ./sample \
+            --builder heroku/builder:24
+
+      - name: Test FFmpeg is installed
+        run: |
+          docker run --rm test-ffmpeg ffmpeg -version
+          docker run --rm test-ffmpeg ffprobe -version
+
+      - name: Test app responds
+        run: |
+          docker run -d --name test-app -p 3000:3000 -e SECRET_KEY_BASE=test -e PORT=3000 test-ffmpeg
+          sleep 5
+          curl -f http://localhost:3000/ffmpeg/info
+          docker stop test-app

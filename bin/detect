@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
-# bin/detect <BUILD_DIR>
+# bin/detect - Cloud Native Buildpack detection script
+# Always detects (unconditional) - user adds this buildpack when they need FFmpeg
 
-set -eu -o pipefail
+set -euo pipefail
 
-echo 'ActiveStorage Preview'
+echo "ActiveStorage Preview"
+exit 0

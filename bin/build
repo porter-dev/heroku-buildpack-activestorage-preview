@@ -1,0 +1,61 @@
+#!/usr/bin/env bash
+# bin/build - Cloud Native Buildpack build script
+# Replaces classic bin/compile for CNB compatibility
+
+set -euo pipefail
+
+# CNB environment variables
+LAYERS_DIR="${CNB_LAYERS_DIR}"
+FFMPEG_LAYER="${LAYERS_DIR}/ffmpeg"
+
+# FFmpeg version - using latest stable for heroku-24 compatible stacks
+FFMPEG_VERSION="7.1.2"
+
+# S3 URL - use CNB_TARGET_ARCH for architecture detection
+INSTALL_URL="https://heroku-activestorage-default.s3.amazonaws.com/dist_heroku-24_${CNB_TARGET_ARCH}/ffmpeg-${FFMPEG_VERSION}.tar.gz"
+
+# Retry function for curl (handles connection resets)
+curl_retry_on_18() {
+    local ec=18
+    local attempts=0
+    while (( ec == 18 && attempts++ < 3 )); do
+        curl "$@"
+        ec=$?
+    done
+    return $ec
+}
+
+echo "-----> Installing FFmpeg ${FFMPEG_VERSION} for ActiveStorage Preview"
+
+# Check cache - if version matches, reuse layer
+if [[ -f "${FFMPEG_LAYER}/ffmpeg-version" ]] && grep -q "${FFMPEG_VERSION}" "${FFMPEG_LAYER}/ffmpeg-version"; then
+    echo "       Using cached FFmpeg ${FFMPEG_VERSION}"
+else
+    echo "       Downloading FFmpeg ${FFMPEG_VERSION} (${CNB_TARGET_ARCH})..."
+
+    # Clean and recreate layer
+    rm -rf "${FFMPEG_LAYER}"
+    mkdir -p "${FFMPEG_LAYER}"
+
+    # Download and extract
+    curl_retry_on_18 -sL --fail --retry 3 --retry-connrefused --connect-timeout 3 "${INSTALL_URL}" \
+        | tar xz -C "${FFMPEG_LAYER}"
+
+    # Record version for cache checking
+    echo "${FFMPEG_VERSION}" > "${FFMPEG_LAYER}/ffmpeg-version"
+
+    echo "       Done"
+fi
+
+# Write layer metadata - CNB uses this for caching and PATH management
+# build = true: layer available to subsequent buildpacks during build
+# cache = true: layer persists between builds
+# launch = true: layer available at runtime (ffmpeg accessible in container)
+cat > "${FFMPEG_LAYER}.toml" << EOF
+[types]
+build = true
+cache = true
+launch = true
+EOF
+
+echo "       FFmpeg installed at: ${FFMPEG_LAYER}/bin/ffmpeg"

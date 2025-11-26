@@ -1,36 +1,97 @@
-# Official Rails 5.2 Active Storage Previews Buildpack
+# ActiveStorage Preview Cloud Native Buildpack
 
-This is an [official Heroku buildpack](https://devcenter.heroku.com/articles/language-support-policy#supported-buildpacks) to support Rails 5.2 users of [Active Storage previews](https://devcenter.heroku.com/articles/active-storage-on-heroku).
+A [Cloud Native Buildpack](https://buildpacks.io/) that installs FFmpeg for Rails [Active Storage previews](https://guides.rubyonrails.org/active_storage_overview.html#previewing-files) of video files.
 
-One of the marquee features of Active Storage is the ability to use “previews” of non-image attachments. Specifically you can preview PDFs and Videos. To use this feature your application needs access to system resources that know how to work with these files. By default Rails ships with support for two PDF libraries, one of which is available on Heroku, and it can use FFmpeg for Video previews, which is not available by default on Heroku.
+## Usage
 
-If you want the ability to preview video files with Active Support you need to run:
+### With pack CLI (Local Development)
 
-```term
-heroku buildpacks:add -i 1 https://github.com/heroku/heroku-buildpack-activestorage-preview
+```bash
+pack build my-app \
+  --buildpack porter-dev/activestorage-preview \
+  --builder heroku/builder:24
 ```
 
-Once you’ve done this, you need to deploy again to get the binaries. You can verify that the dependencies are installed by running `which ffmpeg` on the command line. If there is no output then the operation was not performed correctly. If you see a result then the binaries are ready to be used:
+### With project.toml
 
+Create a `project.toml` in your app root:
+
+```toml
+[_]
+schema-version = "0.2"
+
+[[io.buildpacks.group]]
+id = "porter-dev/activestorage-preview"
+uri = "https://github.com/heroku/heroku-buildpack-activestorage-preview/releases/download/v1.0.0/activestorage-preview.cnb"
+
+# Add your main buildpack after
+[[io.buildpacks.group]]
+id = "heroku/ruby"
 ```
-heroku run bash
-~$ which ffmpeg
-/app/.heroku/activestorage-preview/bin/ffmpeg
+
+### From GitHub Release
+
+Download the `.cnb` file from the [releases page](https://github.com/heroku/heroku-buildpack-activestorage-preview/releases) and use it directly:
+
+```bash
+pack build my-app \
+  --buildpack ./activestorage-preview.cnb \
+  --buildpack heroku/ruby \
+  --builder heroku/builder:24
 ```
 
-## FFmpeg Versions
+## Verification
 
-| Stack     | FFmpeg Version |
-|-----------|---------------:|
-| heroku-22 | 5.1.6 |
-| heroku-24 | 7.1.1 |
+After building, verify FFmpeg is installed:
+
+```bash
+docker run --rm my-app which ffmpeg
+# Output: /layers/porter-dev_activestorage-preview/ffmpeg/bin/ffmpeg
+
+docker run --rm my-app ffmpeg -version
+```
+
+## FFmpeg Version
+
+| Architecture | FFmpeg Version |
+|--------------|---------------:|
+| amd64        | 7.1.2          |
+| arm64        | 7.1.2          |
 
 ## Development
 
+### Building Locally
+
+```bash
+# Build a test image
+pack build test-app \
+  --buildpack . \
+  --builder heroku/builder:24 \
+  --trust-builder
+
+# Verify installation
+docker run --rm test-app ffmpeg -version
+```
+
+### Packaging
+
+```bash
+pack buildpack package activestorage-preview.cnb --format file
+```
+
 ### Binaries
 
-Instructions for building binaries (currently only FFmpeg) can be found in [build/README.md](build/README.md).
+Instructions for building FFmpeg binaries can be found in [build/README.md](build/README.md).
 
-### Versioning
+## Migration from Classic Buildpack
 
-The main branch is stable. Each commit is a stand alone version.
+This is the Cloud Native Buildpack version. Key differences:
+
+- Uses CNB layer system instead of `.heroku/` directory
+- Automatic PATH management (no `.profile.d` scripts)
+- Built-in caching via layer metadata
+- Multi-architecture support (amd64 and arm64)
+
+## License
+
+MIT

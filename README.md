@@ -22,7 +22,7 @@ schema-version = "0.2"
 
 [[io.buildpacks.group]]
 id = "porter-dev/activestorage-preview"
-uri = "https://github.com/heroku/heroku-buildpack-activestorage-preview/releases/download/v1.0.0/activestorage-preview.cnb"
+uri = "https://github.com/porter-dev/heroku-buildpack-activestorage-preview/releases/download/v1.0.0/activestorage-preview.cnb"
 
 # Add your main buildpack after
 [[io.buildpacks.group]]
@@ -31,7 +31,7 @@ id = "heroku/ruby"
 
 ### From GitHub Release
 
-Download the `.cnb` file from the [releases page](https://github.com/heroku/heroku-buildpack-activestorage-preview/releases) and use it directly:
+Download the `.cnb` file from the [releases page](https://github.com/porter-dev/heroku-buildpack-activestorage-preview/releases) and use it directly:
 
 ```bash
 pack build my-app \

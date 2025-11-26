@@ -3,7 +3,7 @@ require "bundler/setup"
 require 'rspec/retry'
 require 'fileutils'
 
-ENV["HATCHET_BUILDPACK_BASE"] = "https://github.com/heroku/heroku-buildpack-activestorage-preview.git"
+ENV["HATCHET_BUILDPACK_BASE"] = "https://github.com/porter-dev/heroku-buildpack-activestorage-preview.git"
 
 require 'hatchet'
 require 'pathname'
